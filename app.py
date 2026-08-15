@@ -2,31 +2,28 @@ import streamlit as st
 from google import genai
 from PIL import Image
 import json
-import sqlite3
+import psycopg2
 import pandas as pd
 
-# --- データベース保存用の関数 ---
+# --- データベース保存用の関数 (Supabase用) ---
 def save_score_to_db(data):
-    conn = sqlite3.connect('bowling_scores.db')
+    # secrets.tomlから接続URLを読み込んで接続
+    conn = psycopg2.connect(st.secrets["DATABASE_URL"])
     cursor = conn.cursor()
-    # テーブルにデータを挿入
+    
     cursor.execute('''
         INSERT INTO bowling_scores (
             play_date, location, lane_number, player_name,
             frame_1, frame_2, frame_3, frame_4, frame_5,
             frame_6, frame_7, frame_8, frame_9, frame_10,
             total_score
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     ''', (
-        data.get("プレイ日時", ""),
-        data.get("店舗名", ""),
-        data.get("レーン", 0),
-        data.get("プレイヤー名", ""),
+        data.get("プレイ日時", ""), data.get("店舗名", ""), data.get("レーン", 0), data.get("プレイヤー名", ""),
         data.get("フレーム1", ""), data.get("フレーム2", ""), data.get("フレーム3", ""),
         data.get("フレーム4", ""), data.get("フレーム5", ""), data.get("フレーム6", ""),
         data.get("フレーム7", ""), data.get("フレーム8", ""), data.get("フレーム9", ""),
-        data.get("フレーム10", ""),
-        data.get("合計点数", 0)
+        data.get("フレーム10", ""), data.get("合計点数", 0)
     ))
     conn.commit()
     conn.close()
@@ -125,9 +122,9 @@ if 'raw_json' in st.session_state:
 st.write("---")
 st.write("### 🗂️ 過去のスコア履歴")
 
+# --- 過去のスコア履歴の表示 (Supabase用) ---
 def load_scores_from_db():
-    conn = sqlite3.connect('bowling_scores.db')
-    # pandasを使ってデータベースから一括で読み込むと、Streamlitでの表示が非常に綺麗になります
+    conn = psycopg2.connect(st.secrets["DATABASE_URL"])
     query = """
     SELECT 
         play_date AS プレイ日時, 
